@@ -120,6 +120,7 @@ async function initData() {
     }
 }
 
+
 // ===== AUTH FUNCTIONS =====
 function isLoggedIn() { return DB.getCurrentUser() !== null; }
 function isAdmin() { const u = DB.getCurrentUser(); return u && u.role === 'admin'; }
@@ -128,10 +129,8 @@ function getCurrentUser() { return DB.getCurrentUser(); }
 async function register(name, email, phone, password, role) {
     const existing = await firestore.collection('users').where('email', '==', email).get();
     if (!existing.empty) return { success: false, message: 'Email already exists!' };
-    
     const allUsers = await firestore.collection('users').get();
     const id = allUsers.empty ? 1 : Math.max(...allUsers.docs.map(d => Number(d.id))) + 1;
-    
     const newUser = { id, name, email, phone, password, role };
     await DB.setUser(newUser);
     return { success: true, message: 'Account created successfully!' };
@@ -140,10 +139,8 @@ async function register(name, email, phone, password, role) {
 async function login(email, password) {
     const snap = await firestore.collection('users').where('email', '==', email).get();
     if (snap.empty) return { success: false, message: 'Invalid email or password!' };
-    
     const user = { id: snap.docs[0].id, ...snap.docs[0].data() };
     if (user.password !== password) return { success: false, message: 'Invalid email or password!' };
-    
     DB.setCurrentUser(user);
     return { success: true, user };
 }
@@ -152,6 +149,19 @@ function logout() {
     DB.clearCurrentUser();
     DB.setCart([]);
     window.location.href = 'auth.html';
+}
+
+// ===== TEMPORARY: SEED ADMIN (DELETE AFTER FIRST USE) =====
+async function forceSeedAdmin() {
+    await DB.setUser({
+        id: 1,
+        name: 'Admin User',
+        email: 'admin@luxe.com',
+        phone: '01620778470',
+        password: 'admin123',
+        role: 'admin'
+    });
+    console.log('Admin seeded! Check Firestore console.');
 }
 
 // ===== PRODUCT FUNCTIONS =====
