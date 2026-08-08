@@ -152,7 +152,7 @@ function logout() {
 }
 
 // ===== TEMPORARY: SEED ADMIN (DELETE AFTER FIRST USE) =====
-async function forceSeedAdmin() {
+async function seedAdminAndLogin() {
     await DB.setUser({
         id: 1,
         name: 'Admin User',
@@ -161,7 +161,8 @@ async function forceSeedAdmin() {
         password: 'admin123',
         role: 'admin'
     });
-    console.log('Admin seeded! Check Firestore console.');
+    DB.setCurrentUser({ id: 1, name: 'Admin User', email: 'admin@luxe.com', role: 'admin' });
+    window.location.href = 'admin.html';
 }
 
 // ===== PRODUCT FUNCTIONS =====
