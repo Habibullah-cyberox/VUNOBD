@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Luxe Attire</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="index.html" class="nav-logo"><img src="logu.png" alt="VUNO Logo" style="height: 150px;"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#shop">Shop</a></li>
+                <li><a href="index.html#new">New Arrivals</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+            <div class="nav-actions">
+                <div id="authNav" style="display: none;">
+                    <a href="auth.html" class="btn-gold" style="padding: 10px 25px; font-size: 14px;">Sign In</a>
+                </div>
+                <div id="userNav" style="display: none;">
+                    <a href="orders.html" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 14px; margin-right: 15px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; background: var(--light); transition: all 0.3s;" onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--light)';this.style.color='var(--primary)'">
+                        <i class="fas fa-box"></i> My Orders
+                    </a>
+                    <a href="cart.html" class="nav-icon">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="cart-badge" id="navCartBadge">0</span>
+                    </a>
+                    <div class="user-menu" onclick="toggleDropdown()">
+                        <div class="user-avatar" id="navUserAvatar">U</div>
+                        <span id="navUserName" style="font-size: 14px; font-weight: 500;">User</span>
+                        <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+                        <div class="dropdown" id="userDropdown">
+                            <div style="padding: 10px 15px; border-bottom: 1px solid #eee; margin-bottom: 5px;">
+                                <div style="font-weight: 600; font-size: 14px;" id="dropdownName">User</div>
+                                <div style="font-size: 12px; color: #666;" id="dropdownEmail">user@email.com</div>
+                            </div>
+                            <a href="orders.html" style="background: var(--primary); color: white; margin: 5px 8px; border-radius: 8px; justify-content: center; font-weight: 600; padding: 10px 15px;"><i class="fas fa-box"></i> Order Details</a>
+                            <a href="admin.html" id="adminLink"><i class="fas fa-cog"></i> Admin Panel</a>
+                            <div class="divider"></div>
+                            <a href="#" onclick="logout(); return false;" style="color: #dc3545;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <section class="section" style="margin-top: 70px;">
+        <div class="section-header">
+            <h2 id="ordersTitle">My Orders</h2>
+            <p>Track your order history</p>
+        </div>
+        
+        <div id="orderLookupSection" style="max-width: 500px; margin: 0 auto 40px; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); display: none;">
+            <h3 style="font-family: 'Playfair Display', serif; margin-bottom: 20px; text-align: center;">Find Your Orders</h3>
+            <p style="color: var(--text-light); text-align: center; margin-bottom: 25px;">Enter your phone number to view your order history and payment status</p>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="lookupPhone" placeholder="Enter your phone number" required>
+            </div>
+            <button class="btn-primary" onclick="lookupOrders()" style="width: 100%;">View Orders</button>
+            <p style="text-align: center; margin-top: 20px; font-size: 14px;"><a href="auth.html" style="color: var(--accent);">Admin Login</a></p>
+        </div>
+        
+        <div id="ordersSection" class="admin-table-container" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; color: var(--text-light);">Order ID</th>
+                        <th style="padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; color: var(--text-light);">Items</th>
+                        <th style="padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; color: var(--text-light);">Total</th>
+                        <th style="padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; color: var(--text-light);">Payment</th>
+                        <th style="padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; color: var(--text-light);">Status</th>
+                        <th style="padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; color: var(--text-light);">Date</th>
+                        <th style="padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; color: var(--text-light);">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="modal-overlay" id="orderDetailsModal">
+        <div class="modal" style="max-width: 700px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-family: 'Playfair Display', serif;">Order Details</h2>
+                <button onclick="closeModal('orderDetailsModal')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+            </div>
+            <div id="orderDetailsContent"></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <h3><img src="logu.png" alt="VUNO Logo" style="height: 150px;"></h3>
+                <p align="center">Elevating women's fashion with timeless elegance and modern sophistication since 2026.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Contact Info</h4>
+                <ul>
+                    <li><i class="fas fa-phone" style="margin-right: 8px; color: var(--gold);"></i> 01718694925</li>
+                    <li><i class="fas fa-envelope" style="margin-right: 8px; color: var(--gold);"></i> vunobd@gmail.com</li>
+                    <li><i class="fas fa-map-marker-alt" style="margin-right: 8px; color: var(--gold);"></i> Gazipur, Dhaka, Bangladesh</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 VUNO. All rights reserved.</p>
+        </div>
+    </footer>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+    <script>
+        window.addEventListener('load', initOrdersPage);
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+        });
+    </script>
+</body>
+</html>

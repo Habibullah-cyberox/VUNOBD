@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - VUNO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-bg-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+
+        <div class="scene">
+            <div class="auth-card" style="position: relative; height: auto; min-height: 460px; transform: none; backface-visibility: visible;">
+                <div class="auth-logo">
+                    <i class="fas fa-gem"></i>
+                    <h1>VUNO</h1>
+                    <p>Admin Sign In</p>
+                </div>
+                <div class="alert alert-error" id="loginError" style="display: none;"><i class="fas fa-exclamation-circle"></i> <span id="loginErrorText">Invalid email or password!</span></div>
+                <form id="loginForm">
+                    <div class="input-group">
+                        <label>Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="Enter admin email" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Sign In</button>
+                </form>
+                <div class="auth-footer">
+                    <a href="index.html" style="color: var(--gold); text-decoration: none; font-weight: 600;">← Back to Store</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+    <script>window.addEventListener('load', initAuthPage);</script>
+</body>
+</html>

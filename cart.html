@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - Luxe Attire</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="index.html" class="nav-logo"><img src="logu.png" alt="VUNO Logo" style="height: 150px;"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#shop">Shop</a></li>
+                <li><a href="index.html#new">New Arrivals</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+            <div class="nav-actions">
+                <div id="authNav" style="display: none;">
+                    <a href="auth.html" class="btn-gold" style="padding: 10px 25px; font-size: 14px;">Sign In</a>
+                </div>
+                <div id="userNav" style="display: none;">
+                    <a href="orders.html" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 14px; margin-right: 15px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; background: var(--light); transition: all 0.3s;" onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--light)';this.style.color='var(--primary)'">
+                        <i class="fas fa-box"></i> My Orders
+                    </a>
+                    <a href="cart.html" class="nav-icon">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="cart-badge" id="navCartBadge">0</span>
+                    </a>
+                    <div class="user-menu" onclick="toggleDropdown()">
+                        <div class="user-avatar" id="navUserAvatar">U</div>
+                        <span id="navUserName" style="font-size: 14px; font-weight: 500;">User</span>
+                        <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+                        <div class="dropdown" id="userDropdown">
+                            <div style="padding: 10px 15px; border-bottom: 1px solid #eee; margin-bottom: 5px;">
+                                <div style="font-weight: 600; font-size: 14px;" id="dropdownName">User</div>
+                                <div style="font-size: 12px; color: #666;" id="dropdownEmail">user@email.com</div>
+                            </div>
+                            <a href="orders.html" style="background: var(--primary); color: white; margin: 5px 8px; border-radius: 8px; justify-content: center; font-weight: 600; padding: 10px 15px;"><i class="fas fa-box"></i> Order Details</a>
+                            <a href="admin.html" id="adminLink"><i class="fas fa-cog"></i> Admin Panel</a>
+                            <div class="divider"></div>
+                            <a href="#" onclick="logout(); return false;" style="color: #dc3545;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <section class="cart-page">
+        <div class="section-header">
+            <h2>Shopping Cart</h2>
+            <p>Review your selected items</p>
+        </div>
+        <div id="cartContainer"></div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <h3><img src="logu.png" alt="VUNO Logo" style="height: 150px;"></h3>
+                <p align="center">Elevating women's fashion with timeless elegance and modern sophistication since 2026.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Contact Info</h4>
+                <ul>
+                    <li><i class="fas fa-phone" style="margin-right: 8px; color: var(--gold);"></i> 01718694925</li>
+                    <li><i class="fas fa-envelope" style="margin-right: 8px; color: var(--gold);"></i> vunobd@gmail.com</li>
+                    <li><i class="fas fa-map-marker-alt" style="margin-right: 8px; color: var(--gold);"></i> Gazipur, Dhaka, Bangladesh</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 VUNO. All rights reserved.</p>
+        </div>
+    </footer>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+    <script>window.addEventListener('load', initCartPage);</script>
+</body>
+</html>

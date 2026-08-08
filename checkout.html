@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - VUNO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="index.html" class="nav-logo"><img src="logu.png" alt="VUNO Logo" style="height: 150px;"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#shop">Shop</a></li>
+                <li><a href="index.html#new">New Arrivals</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+            <div class="nav-actions">
+                <div id="authNav" style="display: none;">
+                    <a href="auth.html" class="btn-gold" style="padding: 10px 25px; font-size: 14px;">Sign In</a>
+                </div>
+                <div id="userNav" style="display: none;">
+                    <a href="orders.html" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 14px; margin-right: 15px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; background: var(--light); transition: all 0.3s;" onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--light)';this.style.color='var(--primary)'">
+                        <i class="fas fa-box"></i> My Orders
+                    </a>
+                    <a href="cart.html" class="nav-icon">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="cart-badge" id="navCartBadge">0</span>
+                    </a>
+                    <div class="user-menu" onclick="toggleDropdown()">
+                        <div class="user-avatar" id="navUserAvatar">U</div>
+                        <span id="navUserName" style="font-size: 14px; font-weight: 500;">User</span>
+                        <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+                        <div class="dropdown" id="userDropdown">
+                            <div style="padding: 10px 15px; border-bottom: 1px solid #eee; margin-bottom: 5px;">
+                                <div style="font-weight: 600; font-size: 14px;" id="dropdownName">User</div>
+                                <div style="font-size: 12px; color: #666;" id="dropdownEmail">user@email.com</div>
+                            </div>
+                            <a href="orders.html" style="background: var(--primary); color: white; margin: 5px 8px; border-radius: 8px; justify-content: center; font-weight: 600; padding: 10px 15px;"><i class="fas fa-box"></i> Order Details</a>
+                            <a href="admin.html" id="adminLink"><i class="fas fa-cog"></i> Admin Panel</a>
+                            <div class="divider"></div>
+                            <a href="#" onclick="logout(); return false;" style="color: #dc3545;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <section class="checkout-page">
+        <div class="section-header">
+            <h2>Checkout</h2>
+            <p>Complete your purchase</p>
+        </div>
+
+        <form id="checkoutForm">
+            <div class="checkout-grid">
+                <div>
+                    <div class="checkout-box">
+                        <h3>Order Summary</h3>
+                        <div id="checkoutSummary"></div>
+                        <div style="display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span style="font-size: 14px; color: var(--text-light);">Subtotal</span>
+                            <span id="checkoutSubtotal" style="font-weight: 600;">৳0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span style="font-size: 14px; color: var(--text-light);">Delivery</span>
+                            <span id="checkoutDelivery" style="font-weight: 600;">৳70</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 20px 0 0; margin-top: 10px; border-top: 2px solid #eee;">
+                            <span style="font-size: 18px; font-weight: 700;">Total</span>
+                            <span id="checkoutTotal" style="font-size: 24px; font-weight: 700; color: var(--accent);">৳0</span>
+                        </div>
+                    </div>
+
+                    <div class="checkout-box" style="margin-top: 30px;">
+                        <h3>Customer Details</h3>
+                        <div class="form-group">
+                            <label>Customer Name</label>
+                            <input type="text" id="customerName" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>Customer Phone</label>
+                            <input type="tel" id="contactPhone" placeholder="Enter your phone number" required>
+                        </div>
+                    </div>
+
+                    <div class="checkout-box" style="margin-top: 30px;">
+                        <h3>Delivery Address</h3>
+                        <div class="form-group">
+                            <textarea id="deliveryAddress" rows="4" placeholder="Enter your full delivery address" required style="resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>Delivery Location</label>
+                            <select id="deliveryLocation" required style="width: 100%; padding: 14px 18px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 15px; outline: none; font-family: 'Inter', sans-serif; transition: all 0.3s;">
+                                <option value="dhaka">Dhaka City - ৳70</option>
+                                <option value="outside">Outside Dhaka - ৳120</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="checkout-box">
+                        <h3>Payment Method</h3>
+                        <div class="payment-methods">
+                            <div class="payment-method bkash" onclick="selectPayment(this, 'bkash')">
+                                <input type="radio" name="payment_method" value="bkash" style="display: none;">
+                                <i class="fas fa-mobile-alt"></i>
+                                <span>bKash</span>
+                            </div>
+                            <div class="payment-method nagad" onclick="selectPayment(this, 'nagad')">
+                                <input type="radio" name="payment_method" value="nagad" style="display: none;">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <span>Nagad</span>
+                            </div>
+                            <div class="payment-method rocket" onclick="selectPayment(this, 'rocket')">
+                                <input type="radio" name="payment_method" value="rocket" style="display: none;">
+                                <i class="fas fa-rocket"></i>
+                                <span>Rocket</span>
+                            </div>
+                        </div>
+
+                        <div class="payment-info">
+                            <p><strong>Payment Instructions:</strong></p>
+                            <ol style="margin-top: 8px; padding-left: 18px;">
+                                <li>Open your mobile banking app</li>
+                                <li>Send money to: <strong style="font-size: 16px;">01891725290</strong></li>
+                                <li>Enter the total amount shown above</li>
+                                <li>Complete the payment</li>
+                                <li>Enter your details below</li>
+                            </ol>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Your bKash/Nagad/Rocket Number</label>
+                            <input type="tel" id="customerPhone" placeholder="01XXXXXXXXX" required>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="margin-top: 10px; width: 100%;">Place Order</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div id="orderSuccess" class="order-success hidden" style="max-width: 600px; margin: 0 auto;">
+            <i class="fas fa-check-circle"></i>
+            <h3>Order Placed Successfully!</h3>
+            <p>Thank you for your purchase. You will receive a confirmation message shortly.</p>
+            <p style="margin-top: 15px; color: #666;">Order ID: <strong id="successOrderId" style="color: var(--primary); font-size: 18px;">#ORD-001</strong></p>
+            <div style="margin-top: 30px;">
+                <a href="orders.html" class="btn-gold" style="margin-right: 15px;">View Orders</a>
+                <a href="index.html" class="btn-outline" style="color: var(--primary); border-color: var(--primary);">Continue Shopping</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <h3><img src="logu.png" alt="VUNO Logo" style="height: 150px;"></h3>
+                <p align="center">Elevating women's fashion with timeless elegance and modern sophistication since 2026.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Contact Info</h4>
+                <ul>
+                    <li><i class="fas fa-phone" style="margin-right: 8px; color: var(--gold);"></i> 01718694925</li>
+                    <li><i class="fas fa-envelope" style="margin-right: 8px; color: var(--gold);"></i> vunobd@gmail.com</li>
+                    <li><i class="fas fa-map-marker-alt" style="margin-right: 8px; color: var(--gold);"></i> Gazipur, Dhaka, Bangladesh</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 VUNO. All rights reserved.</p>
+        </div>
+    </footer>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+    <script>window.addEventListener('load', initCheckoutPage);</script>
+</body>
+</html>

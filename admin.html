@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Luxe Attire</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-logo"><img src="logu.png" alt="VUNO Logo" style="height: 150px;"></div>
+            <nav class="admin-nav">
+                <button class="admin-nav-item active" data-tab="dashboard" onclick="showAdminTab('dashboard')"><i class="fas fa-chart-line"></i><span>Dashboard</span></button>
+                <button class="admin-nav-item" data-tab="products" onclick="showAdminTab('products')"><i class="fas fa-tshirt"></i><span>Products</span></button>
+                <button class="admin-nav-item" data-tab="orders" onclick="showAdminTab('orders')"><i class="fas fa-shopping-cart"></i><span>Orders</span></button>
+                <button class="admin-nav-item" data-tab="customers" onclick="showAdminTab('customers')"><i class="fas fa-users"></i><span>Customers</span></button>
+                <button class="admin-nav-item" data-tab="messages" onclick="showAdminTab('messages')">
+                    <i class="fas fa-envelope"></i>
+                    <span>Messages</span>
+                    <span id="messagesBadge" style="margin-left: auto; background: var(--accent); color: white; font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; border-radius: 50%; display: none; align-items: center; justify-content: center; padding: 0 6px;">0</span>
+                </button>
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 20px; padding-top: 20px;">
+                    <a href="index.html" class="admin-nav-item"><i class="fas fa-arrow-left"></i><span>Back to Store</span></a>
+                    <a href="#" onclick="logout(); return false;" class="admin-nav-item"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="admin-main">
+            <div id="admin-dashboard" class="admin-panel">
+                <div class="admin-header">
+                    <h1>Dashboard Overview</h1>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="color: #666;">Welcome back, <strong id="adminUserName">Admin</strong></span>
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--gold)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;" id="adminUserAvatar">A</div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+                        <div class="stat-value" id="statOrders">0</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-tshirt"></i></div>
+                        <div class="stat-value" id="statProducts">0</div>
+                        <div class="stat-label">Total Products</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-value" id="statCustomers">0</div>
+                        <div class="stat-label">Total Customers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="stat-value" id="statRevenue">৳0</div>
+                        <div class="stat-label">Total Revenue</div>
+                    </div>
+                </div>
+                <div class="admin-table-container">
+                    <div class="admin-table-header">
+                        <h3>Recent Orders</h3>
+                        <button class="btn-add" onclick="showAdminTab('orders')"><i class="fas fa-eye"></i> View All</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="recentOrdersTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="admin-products" class="admin-panel hidden">
+                <div class="admin-header">
+                    <h1>Products Management</h1>
+                    <button class="btn-add" onclick="openModal('addProductModal')"><i class="fas fa-plus"></i> Add Product</button>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="adminProductsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="admin-orders" class="admin-panel hidden">
+                <div class="admin-header">
+                    <h1>Orders Management</h1>
+                    <button class="btn-add" style="background: #dc3545;" onclick="clearAllOrders()">
+                        <i class="fas fa-trash-alt"></i> Clear All Orders
+                    </button>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Order ID</th><th>Customer Name</th><th>Customer Phone</th><th>Address</th><th>Delivery</th><th>Items</th><th>Total</th><th>Payment</th><th>Phone</th><th>Status</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="adminOrdersTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="admin-customers" class="admin-panel hidden">
+                <div class="admin-header"><h1>Customer Management</h1></div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Role</th></tr>
+                        </thead>
+                        <tbody id="adminCustomersTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="admin-messages" class="admin-panel hidden">
+                <div class="admin-header">
+                    <h1>Customer Messages</h1>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Name</th><th>Email</th><th>Phone</th><th>Message</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="adminMessagesTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="addProductModal">
+        <div class="modal">
+            <h2>Add New Product</h2>
+            <form id="addProductForm" onsubmit="event.preventDefault(); saveNewProduct();">
+                <div class="form-group"><label>Product Name</label><input type="text" id="newProductName" required></div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="newProductCategory" required>
+                        <option value="evening">Evening Gown</option>
+                        <option value="casual">Casual</option>
+                        <option value="wedding">Wedding</option>
+                        <option value="party">Party Wear</option>
+                        <option value="traditional">Traditional</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Price (৳)</label><input type="number" id="newProductPrice" required min="1"></div>
+                <div class="form-group"><label>Old Price (৳)</label><input type="number" id="newProductOldPrice" min="0"></div>
+                <div class="form-group"><label>Stock</label><input type="number" id="newProductStock" value="100" min="0"></div>
+                <div class="form-group"><label>Image URL</label><input type="url" id="newProductImage" placeholder="https://..." required></div>
+                <div class="form-group"><label>Description</label><textarea id="newProductDesc" rows="3"></textarea></div>
+                <div style="display: flex; gap: 15px; margin-top: 25px;">
+                    <button type="button" class="btn-add" style="background: #666;" onclick="closeModal('addProductModal')">Cancel</button>
+                    <button type="submit" class="btn-add">Add Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editProductModal">
+        <div class="modal">
+            <h2>Edit Product</h2>
+            <input type="hidden" id="editProductId">
+            <div class="form-group"><label>Product Name</label><input type="text" id="editProductName" required></div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="editProductCategory" required>
+                    <option value="evening">Evening Gown</option>
+                    <option value="casual">Casual</option>
+                    <option value="wedding">Wedding</option>
+                    <option value="party">Party Wear</option>
+                    <option value="traditional">Traditional</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Price (৳)</label><input type="number" id="editProductPrice" required min="1"></div>
+            <div class="form-group"><label>Old Price (৳)</label><input type="number" id="editProductOldPrice" min="0"></div>
+            <div class="form-group"><label>Stock</label><input type="number" id="editProductStock" min="0"></div>
+            <div class="form-group"><label>Image URL</label><input type="url" id="editProductImage" required></div>
+            <div class="form-group"><label>Description</label><textarea id="editProductDesc" rows="3"></textarea></div>
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+                <button type="button" class="btn-add" style="background: #666;" onclick="closeModal('editProductModal')">Cancel</button>
+                <button type="button" class="btn-add" onclick="saveEditProduct()">Update Product</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+    <script>
+        window.addEventListener('load', initAdminPage);
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+        });
+    </script>
+</body>
+</html>
