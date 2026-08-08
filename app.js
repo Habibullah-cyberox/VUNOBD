@@ -1,12 +1,13 @@
 
 // ===== FIREBASE CONFIG (REPLACE WITH YOUR REAL VALUES) =====
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+   apiKey: "AIzaSyDK5WWakHHostTvgGajH3SmFvl20iMs0-8",
+   authDomain: "vunobd-af9fa.firebaseapp.com",
+   projectId: "vunobd-af9fa",
+   storageBucket: "vunobd-af9fa.firebasestorage.app",
+   messagingSenderId: "309879840770",
+   appId: "1:309879840770:web:6dfc41c2e24cd384bd071b",
+   measurementId: "G-S466WEWF0D"
 };
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
