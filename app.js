@@ -126,17 +126,24 @@ function isAdmin() { const u = DB.getCurrentUser(); return u && u.role === 'admi
 function getCurrentUser() { return DB.getCurrentUser(); }
 
 async function register(name, email, phone, password, role) {
-    const users = DB.getUsers();
-    if (users.find(u => u.email === email)) return { success: false, message: 'Email already exists!' };
-    const id = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-    users.push({ id, name, email, phone, password, role });
-    await DB.setUsers(users);
+    const existing = await firestore.collection('users').where('email', '==', email).get();
+    if (!existing.empty) return { success: false, message: 'Email already exists!' };
+    
+    const allUsers = await firestore.collection('users').get();
+    const id = allUsers.empty ? 1 : Math.max(...allUsers.docs.map(d => Number(d.id))) + 1;
+    
+    const newUser = { id, name, email, phone, password, role };
+    await DB.setUser(newUser);
     return { success: true, message: 'Account created successfully!' };
 }
 
-function login(email, password) {
-    const user = DB.getUsers().find(u => u.email === email && u.password === password);
-    if (!user) return { success: false, message: 'Invalid email or password!' };
+async function login(email, password) {
+    const snap = await firestore.collection('users').where('email', '==', email).get();
+    if (snap.empty) return { success: false, message: 'Invalid email or password!' };
+    
+    const user = { id: snap.docs[0].id, ...snap.docs[0].data() };
+    if (user.password !== password) return { success: false, message: 'Invalid email or password!' };
+    
     DB.setCurrentUser(user);
     return { success: true, user };
 }
@@ -390,23 +397,24 @@ async function initAuthPage() {
     const user = getCurrentUser();
     if (user && user.role === 'admin') { window.location.href = 'admin.html'; return; }
 
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        const user = DB.getUsers().find(u => u.email === email && u.password === password);
-        if (user && user.role === 'admin') {
-            DB.setCurrentUser(user);
-            window.location.href = 'admin.html';
-        } else {
-            document.getElementById('loginError').style.display = 'block';
-            if (user && user.role !== 'admin') {
-                document.getElementById('loginErrorText').textContent = 'Admin access only!';
-            } else {
-                document.getElementById('loginErrorText').textContent = 'Invalid email or password!';
-            }
-        }
-    });
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+       e.preventDefault();
+       const email = document.getElementById('loginEmail').value;
+       const password = document.getElementById('loginPassword').value;
+       
+       const result = await login(email, password);
+       
+       if (result.success && result.user.role === 'admin') {
+           window.location.href = 'admin.html';
+       } else {
+           document.getElementById('loginError').style.display = 'block';
+           if (result.success && result.user.role !== 'admin') {
+               document.getElementById('loginErrorText').textContent = 'Admin access only!';
+           } else {
+               document.getElementById('loginErrorText').textContent = 'Invalid email or password!';
+           }
+       }
+   });
 }
 
 // ===== NAV LOGIC =====
