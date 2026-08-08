@@ -25,15 +25,11 @@
                 </div>
                 <div class="alert alert-error" id="loginError" style="display: none;"><i class="fas fa-exclamation-circle"></i> <span id="loginErrorText">Invalid email or password!</span></div>
                 <form id="loginForm">
-                    <div class="input-group">
-                        <label>Email Address</label>
-                        <input type="email" id="loginEmail" placeholder="Enter admin email" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Password</label>
-                        <input type="password" id="loginPassword" placeholder="Enter password" required>
-                    </div>
+                    <!-- ... existing inputs ... -->
                     <button type="submit" class="btn-primary">Sign In</button>
+                    
+                    <!-- ADD THIS TEMPORARY BUTTON -->
+                    <button type="button" onclick="seedAdminAndLogin()" style="margin-top:10px; background:#444;">Setup Admin Account</button>
                 </form>
                 <div class="auth-footer">
                     <a href="index.html" style="color: var(--gold); text-decoration: none; font-weight: 600;">← Back to Store</a>
