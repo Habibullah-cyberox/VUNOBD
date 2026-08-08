@@ -18,29 +18,47 @@ const firestore = firebase.firestore();
 const CACHE = { users: [], products: [], orders: [], messages: [] };
 
 // ===== DATA STORE =====
+const ADMIN_SECRET = "shonapakhi"; // Change this to your own secret word
+
 const DB = {
-    // localStorage ONLY for cart + login session
+    // ===== localStorage ONLY (Cart + Login) =====
     getCart: () => JSON.parse(localStorage.getItem('lux_cart')) || [],
     setCart: (c) => localStorage.setItem('lux_cart', JSON.stringify(c)),
     getCurrentUser: () => JSON.parse(localStorage.getItem('lux_currentUser')) || null,
     setCurrentUser: (u) => localStorage.setItem('lux_currentUser', JSON.stringify(u)),
     clearCurrentUser: () => localStorage.removeItem('lux_currentUser'),
 
-    // Read from live cache
+    // ===== Firestore Readers (from live cache) =====
     getUsers: () => CACHE.users,
     getProducts: () => CACHE.products,
     getOrders: () => CACHE.orders,
     getMessages: () => CACHE.messages,
 
-    // Write to Firestore
-    async setUser(user) { await firestore.collection('users').doc(String(user.id)).set(user, { merge: true }); },
-    async setProduct(p) { await firestore.collection('products').doc(String(p.id)).set(p, { merge: true }); },
-    async deleteProduct(id) { await firestore.collection('products').doc(String(id)).delete(); },
-    async addOrder(o) { await firestore.collection('orders').doc(o.id).set(o); },
-    async updateOrderStatus(id, status) { await firestore.collection('orders').doc(id).update({ status }); },
-    async addMessage(m) { await firestore.collection('messages').doc(String(m.id)).set(m); },
-    async deleteMessage(id) { await firestore.collection('messages').doc(String(id)).delete(); },
-    async markMessageRead(id, status) { await firestore.collection('messages').doc(String(id)).update({ status }); },
+    // ===== Firestore Writers (Admin Secret included) =====
+    async setUser(user) {
+        await firestore.collection('users').doc(String(user.id)).set({ ...user, _admin: ADMIN_SECRET }, { merge: true });
+    },
+    async setProduct(product) {
+        await firestore.collection('products').doc(String(product.id)).set({ ...product, _admin: ADMIN_SECRET }, { merge: true });
+    },
+    async deleteProduct(id) {
+        await firestore.collection('products').doc(String(id)).delete();
+    },
+    async addOrder(order) {
+        await firestore.collection('orders').doc(order.id).set(order);
+    },
+    async updateOrderStatus(id, status) {
+        await firestore.collection('orders').doc(id).update({ status, _admin: ADMIN_SECRET });
+    },
+    async addMessage(msg) {
+        await firestore.collection('messages').doc(String(msg.id)).set(msg);
+    },
+    async deleteMessage(id) {
+        await firestore.collection('messages').doc(String(id)).delete();
+    },
+    async markMessageRead(id, status) {
+        await firestore.collection('messages').doc(String(id)).update({ status, _admin: ADMIN_SECRET });
+    },
 };
 // ===== REAL-TIME LISTENERS =====
 function startRealtimeSync() {
@@ -148,7 +166,7 @@ function addProduct(product) {
 function updateProduct(id, data) {
     const products = DB.getProducts();
     const idx = products.findIndex(p => p.id === id);
-    if (idx !== -1) { products[idx] = { ...products[idx], ...data }; await DB.setProduct({ ...product, ...data }); }
+    if (idx !== -1) { await DB.setProduct({ ...products[idx], ...data }); }
 }
 
 function deleteProduct(id) {
