@@ -427,6 +427,7 @@ function initNav() {
     const adminLink = document.getElementById('adminLink');
 
     if (user) {
+        // Logged in (customer or admin)
         if (authNav) authNav.style.display = 'none';
         if (userNav) userNav.style.display = 'flex';
         
@@ -441,12 +442,13 @@ function initNav() {
         if (dropEmail) dropEmail.textContent = user.email || '';
         if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
     } else {
+        // Guest user
         if (authNav) authNav.style.display = 'flex';
         if (userNav) userNav.style.display = 'none';
         if (adminLink) adminLink.style.display = 'none';
     }
     
-    // THIS IS CRITICAL - update badge for both guest and logged-in
+    // CRITICAL: Update cart badge for guest, customer, AND admin
     updateNavCart();
     
     document.addEventListener('click', function(e) {
