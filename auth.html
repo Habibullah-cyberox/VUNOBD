@@ -25,11 +25,15 @@
                 </div>
                 <div class="alert alert-error" id="loginError" style="display: none;"><i class="fas fa-exclamation-circle"></i> <span id="loginErrorText">Invalid email or password!</span></div>
                 <form id="loginForm">
-                    <!-- ... existing inputs ... -->
+                    <div class="input-group">
+                        <label>Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="Enter admin email" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter password" required>
+                    </div>
                     <button type="submit" class="btn-primary">Sign In</button>
-                    
-                    <!-- ADD THIS TEMPORARY BUTTON -->
-                    <button type="button" onclick="seedAdminAndLogin()" style="margin-top:10px; background:#444;">Setup Admin Account</button>
                 </form>
                 <div class="auth-footer">
                     <a href="index.html" style="color: var(--gold); text-decoration: none; font-weight: 600;">← Back to Store</a>
@@ -39,6 +43,7 @@
     </div>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="app.js"></script>
     <script>window.addEventListener('load', initAuthPage);</script>
 </body>
