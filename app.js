@@ -429,10 +429,6 @@ function initNav() {
     if (user) {
         if (authNav) authNav.style.display = 'none';
         if (userNav) userNav.style.display = 'flex';
-        if (nameEl) nameEl.textContent = user.name || 'User';
-        if (avatarEl) avatarEl.textContent = (user.name || 'U').charAt(0).toUpperCase();
-        if (dropName) dropName.textContent = user.name || 'User';
-        if (dropEmail) dropEmail.textContent = user.email || '';
         if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
     } else {
         // Guest
@@ -441,9 +437,8 @@ function initNav() {
         if (adminLink) adminLink.style.display = 'none';
     }
     
-    // THIS MUST BE HERE - updates badge for guests too
-    updateNavCart();
-    }
+    updateNavCart(); // <-- This must be here
+}
     
     
     document.addEventListener('click', function(e) {
