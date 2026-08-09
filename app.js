@@ -638,7 +638,7 @@ async function initCheckoutPage() {
                 showToast('Please fill all fields', 'error'); return; 
             }
             
-            const deliveryFee = deliveryLocation === 'dhaka' ? 75 : 120;
+            const deliveryFee = deliveryLocation === 'dhaka' ? 70 : 120;
             const result = await placeOrder(method.value, phone, address, customerName, contactPhone, deliveryFee, deliveryLocation);
             
             if (result.success) {
@@ -658,7 +658,7 @@ async function initCheckoutPage() {
 function updateCheckoutTotal(subtotal) {
     const deliveryLocation = document.getElementById('deliveryLocation');
     if (!deliveryLocation) return;
-    const fee = deliveryLocation.value === 'dhaka' ? 75 : 120;
+    const fee = deliveryLocation.value === 'dhaka' ? 70 : 120;
     const total = subtotal + fee;
     const subtotalEl = document.getElementById('checkoutSubtotal');
     const deliveryEl = document.getElementById('checkoutDelivery');
