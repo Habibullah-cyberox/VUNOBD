@@ -1,67 +1,82 @@
-
-// ===== FIREBASE CONFIG (REPLACE WITH YOUR REAL VALUES) =====
+// ===== FIREBASE CONFIG (YOUR REAL PROJECT) =====
 const firebaseConfig = {
-   apiKey: "AIzaSyDK5WWakHHostTvgGajH3SmFvl20iMs0-8",
-   authDomain: "vunobd-af9fa.firebaseapp.com",
-   projectId: "vunobd-af9fa",
-   storageBucket: "vunobd-af9fa.firebasestorage.app",
-   messagingSenderId: "309879840770",
-   appId: "1:309879840770:web:6dfc41c2e24cd384bd071b",
-   measurementId: "G-S466WEWF0D"
+    apiKey: "AIzaSyDK5WWakHHostTvgGajH3SmFvl20iMs0-8",
+    authDomain: "vunobd-af9fa.firebaseapp.com",
+    projectId: "vunobd-af9fa",
+    storageBucket: "vunobd-af9fa.firebasestorage.app",
+    messagingSenderId: "309879840770",
+    appId: "1:309879840770:web:6dfc41c2e24cd384bd071b",
+    measurementId: "G-S466WEWF0D"
 };
+
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const firestore = firebase.firestore();
+const auth = firebase.auth();
+
+// ===== AUTH STATE CACHE =====
+let APP_USER = null;
+function waitForAuth() {
+    return new Promise((resolve) => {
+        const unsub = auth.onAuthStateChanged((user) => {
+            unsub();
+            resolve(user);
+        });
+    });
+}
+async function syncAuthUser() {
+    const user = await waitForAuth();
+    if (user) {
+        const doc = await firestore.collection('users').doc(user.uid).get();
+        const data = doc.data() || {};
+        APP_USER = {
+            uid: user.uid,
+            email: user.email,
+            name: data.name || '',
+            phone: data.phone || '',
+            role: data.role || 'user'
+        };
+        localStorage.setItem('lux_currentUser', JSON.stringify(APP_USER));
+    } else {
+        APP_USER = null;
+        localStorage.removeItem('lux_currentUser');
+    }
+    return APP_USER;
+}
 
 // ===== LIVE CACHE =====
 const CACHE = { users: [], products: [], orders: [], messages: [] };
 
 // ===== DATA STORE =====
-const ADMIN_SECRET = "shonapakhi"; // Change this to your own secret word
-
 const DB = {
-    // ===== localStorage ONLY (Cart + Login) =====
     getCart: () => JSON.parse(localStorage.getItem('lux_cart')) || [],
     setCart: (c) => localStorage.setItem('lux_cart', JSON.stringify(c)),
-    getCurrentUser: () => JSON.parse(localStorage.getItem('lux_currentUser')) || null,
+    getCurrentUser: () => APP_USER || JSON.parse(localStorage.getItem('lux_currentUser')) || null,
     setCurrentUser: (u) => localStorage.setItem('lux_currentUser', JSON.stringify(u)),
     clearCurrentUser: () => localStorage.removeItem('lux_currentUser'),
 
-    // ===== Firestore Readers (from live cache) =====
     getUsers: () => CACHE.users,
     getProducts: () => CACHE.products,
     getOrders: () => CACHE.orders,
     getMessages: () => CACHE.messages,
 
-    // ===== Firestore Writers (Admin Secret included) =====
-    async setUser(user) {
-        await firestore.collection('users').doc(String(user.id)).set({ ...user, _admin: ADMIN_SECRET }, { merge: true });
-    },
-    async setProduct(product) {
-        await firestore.collection('products').doc(String(product.id)).set({ ...product, _admin: ADMIN_SECRET }, { merge: true });
-    },
-    async deleteProduct(id) {
-        await firestore.collection('products').doc(String(id)).delete();
-    },
-    async addOrder(order) {
-        await firestore.collection('orders').doc(order.id).set(order);
-    },
-    async updateOrderStatus(id, status) {
-        await firestore.collection('orders').doc(id).update({ status, _admin: ADMIN_SECRET });
-    },
-    async addMessage(msg) {
-        await firestore.collection('messages').doc(String(msg.id)).set(msg);
-    },
-    async deleteMessage(id) {
-        await firestore.collection('messages').doc(String(id)).delete();
-    },
-    async markMessageRead(id, status) {
-        await firestore.collection('messages').doc(String(id)).update({ status, _admin: ADMIN_SECRET });
-    },
+    async setUser(user) { await firestore.collection('users').doc(String(user.uid || user.id)).set(user, { merge: true }); },
+    async setProduct(p) { await firestore.collection('products').doc(String(p.id)).set(p, { merge: true }); },
+    async deleteProduct(id) { await firestore.collection('products').doc(String(id)).delete(); },
+    async addOrder(o) { await firestore.collection('orders').doc(o.id).set(o); },
+    async updateOrderStatus(id, status) { await firestore.collection('orders').doc(id).update({ status }); },
+    async addMessage(m) { await firestore.collection('messages').doc(String(m.id)).set(m); },
+    async deleteMessage(id) { await firestore.collection('messages').doc(String(id)).delete(); },
+    async markMessageRead(id, status) { await firestore.collection('messages').doc(String(id)).update({ status }); },
 };
-// ===== REAL-TIME LISTENERS =====
+
+// ===== REAL-TIME LISTENERS (GUARDED) =====
+let syncStarted = false;
 function startRealtimeSync() {
+    if (syncStarted) return;
+    syncStarted = true;
+
     firestore.collection('products').onSnapshot(snap => {
         CACHE.products = snap.docs.map(d => ({ id: Number(d.id), ...d.data() }));
         if (document.getElementById('productsGrid')) renderProducts(currentFilter);
@@ -85,8 +100,11 @@ function startRealtimeSync() {
 }
 
 // ===== INITIALIZE DEFAULT DATA =====
+let dataInitialized = false;
 async function initData() {
-    // Clear old localStorage cloud data
+    if (dataInitialized) return;
+    dataInitialized = true;
+
     localStorage.removeItem('lux_products');
     localStorage.removeItem('lux_users');
     localStorage.removeItem('lux_orders');
@@ -94,13 +112,10 @@ async function initData() {
     localStorage.removeItem('lux_version');
 
     startRealtimeSync();
-
-    // Wait for first load (max 3 sec)
     await new Promise(r => setTimeout(r, 1500));
 
-    // Seed if empty
     if (CACHE.products.length === 0) {
-        const defaults = [ 
+        const defaults = [
             { id: 1, name: 'Royal Blue Evening Gown', category: 'evening', price: 12500, oldPrice: 15000, image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400', rating: 4.8, reviews: 124, badge: 'Best Seller', stock: 50, description: 'Stunning royal blue evening gown perfect for formal events.' },
             { id: 2, name: 'Emerald Silk Saree', category: 'traditional', price: 8900, oldPrice: 11000, image: 'https://images.unsplash.com/photo-1610189012906-4e2c9f6a3f9e?w=400', rating: 4.9, reviews: 89, badge: 'New', stock: 30, description: 'Pure silk saree with intricate embroidery work.' },
             { id: 3, name: 'Blush Pink Cocktail Dress', category: 'party', price: 7500, oldPrice: 9500, image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400', rating: 4.6, reviews: 67, badge: '', stock: 40, description: 'Elegant cocktail dress for special occasions.' },
@@ -115,54 +130,39 @@ async function initData() {
         ];
         for (const p of defaults) await DB.setProduct(p);
     }
-    if (CACHE.users.length === 0) {
-        await DB.setUser({ id: 1, name: 'Admin User', email: 'admin@luxe.com', phone: '01620778470', password: 'admin123', role: 'admin' });
-    }
 }
-
 
 // ===== AUTH FUNCTIONS =====
 function isLoggedIn() { return DB.getCurrentUser() !== null; }
 function isAdmin() { const u = DB.getCurrentUser(); return u && u.role === 'admin'; }
-function getCurrentUser() { return DB.getCurrentUser(); }
+function getCurrentUser() { return APP_USER || DB.getCurrentUser(); }
 
-async function register(name, email, phone, password, role) {
-    const existing = await firestore.collection('users').where('email', '==', email).get();
-    if (!existing.empty) return { success: false, message: 'Email already exists!' };
-    const allUsers = await firestore.collection('users').get();
-    const id = allUsers.empty ? 1 : Math.max(...allUsers.docs.map(d => Number(d.id))) + 1;
-    const newUser = { id, name, email, phone, password, role };
-    await DB.setUser(newUser);
-    return { success: true, message: 'Account created successfully!' };
+async function register(name, email, phone, password, role = 'user') {
+    try {
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        const user = cred.user;
+        await firestore.collection('users').doc(user.uid).set({
+            uid: user.uid, name: name, email: email, phone: phone, role: role
+        });
+        return { success: true, message: 'Account created successfully!' };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
 }
 
 async function login(email, password) {
-    const snap = await firestore.collection('users').where('email', '==', email).get();
-    if (snap.empty) return { success: false, message: 'Invalid email or password!' };
-    const user = { id: snap.docs[0].id, ...snap.docs[0].data() };
-    if (user.password !== password) return { success: false, message: 'Invalid email or password!' };
-    DB.setCurrentUser(user);
-    return { success: true, user };
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+        return { success: true };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
 }
 
 function logout() {
-    DB.clearCurrentUser();
+    auth.signOut();
     DB.setCart([]);
     window.location.href = 'auth.html';
-}
-
-// ===== TEMPORARY: SEED ADMIN (DELETE AFTER FIRST USE) =====
-async function seedAdminAndLogin() {
-    await DB.setUser({
-        id: 1,
-        name: 'Admin User',
-        email: 'admin@luxe.com',
-        phone: '01620778470',
-        password: 'admin123',
-        role: 'admin'
-    });
-    DB.setCurrentUser({ id: 1, name: 'Admin User', email: 'admin@luxe.com', role: 'admin' });
-    window.location.href = 'admin.html';
 }
 
 // ===== PRODUCT FUNCTIONS =====
@@ -170,39 +170,36 @@ function getProducts(filter) {
     const products = DB.getProducts();
     return filter === 'all' ? products : products.filter(p => p.category === filter);
 }
-
 function getProduct(id) { return DB.getProducts().find(p => p.id === id); }
 
-function addProduct(product) {
+async function addProduct(product) {
     const products = DB.getProducts();
     product.id = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-    products.push(product);
     await DB.setProduct(product);
     return product;
 }
-
-function updateProduct(id, data) {
-    const products = DB.getProducts();
-    const idx = products.findIndex(p => p.id === id);
-    if (idx !== -1) { await DB.setProduct({ ...products[idx], ...data }); }
+async function updateProduct(id, data) {
+    const product = DB.getProducts().find(p => p.id === id);
+    if (product) {
+        const updated = { ...product, ...data };
+        await DB.setProduct(updated);
+    }
 }
-
-function deleteProduct(id) {
-   await DB.deleteProduct(id);
+async function deleteProduct(id) {
+    await DB.deleteProduct(id);
 }
 
 // ===== CART FUNCTIONS =====
 function getCart() {
     const user = getCurrentUser();
     const allCart = DB.getCart();
-    if (user) return allCart.filter(item => item.userId === user.id);
+    if (user) return allCart.filter(item => item.userId === user.uid);
     return allCart.filter(item => !item.userId);
 }
-
 function addToCart(productId) {
     const cart = DB.getCart();
     const user = getCurrentUser();
-    const userId = user ? user.id : null;
+    const userId = user ? user.uid : null;
     const existing = cart.find(item => item.userId === userId && item.productId === productId);
     if (existing) { existing.quantity++; }
     else { cart.push({ userId, productId, quantity: 1 }); }
@@ -210,20 +207,18 @@ function addToCart(productId) {
     showToast('Item added to cart!');
     updateNavCart();
 }
-
 function buyNow(productId) {
     const user = getCurrentUser();
-    const userId = user ? user.id : null;
+    const userId = user ? user.uid : null;
     let cart = DB.getCart().filter(item => item.userId !== userId);
     cart.push({ userId, productId, quantity: 1 });
     DB.setCart(cart);
     window.location.href = 'checkout.html';
 }
-
 function updateCartQty(productId, change) {
     const cart = DB.getCart();
     const user = getCurrentUser();
-    const userId = user ? user.id : null;
+    const userId = user ? user.uid : null;
     const item = cart.find(i => i.userId === userId && i.productId === productId);
     if (item) {
         item.quantity += change;
@@ -235,15 +230,13 @@ function updateCartQty(productId, change) {
     }
     updateNavCart();
 }
-
 function removeFromCart(productId) {
     const user = getCurrentUser();
-    const userId = user ? user.id : null;
+    const userId = user ? user.uid : null;
     DB.setCart(DB.getCart().filter(i => !(i.userId === userId && i.productId === productId)));
     updateNavCart();
     showToast('Item removed from cart', 'warning');
 }
-
 function getCartTotal() {
     const cart = getCart();
     const products = DB.getProducts();
@@ -252,20 +245,18 @@ function getCartTotal() {
         return sum + (product ? product.price * item.quantity : 0);
     }, 0);
 }
-
 function getCartCount() {
     return getCart().reduce((sum, item) => sum + item.quantity, 0);
 }
-
 function clearCart() {
     const user = getCurrentUser();
-    const userId = user ? user.id : null;
+    const userId = user ? user.uid : null;
     DB.setCart(DB.getCart().filter(i => i.userId !== userId));
     updateNavCart();
 }
 
 // ===== ORDER FUNCTIONS =====
-function placeOrder(paymentMethod, customerPhone, address, customerName, contactPhone, deliveryFee, deliveryLocation) {
+async function placeOrder(paymentMethod, customerPhone, address, customerName, contactPhone, deliveryFee, deliveryLocation) {
     const cart = getCart();
     if (cart.length === 0) return { success: false, message: 'Cart is empty!' };
     const products = DB.getProducts();
@@ -278,7 +269,7 @@ function placeOrder(paymentMethod, customerPhone, address, customerName, contact
     const currentUser = getCurrentUser();
     const order = {
         id: orderId,
-        userId: currentUser ? currentUser.id : null,
+        userId: currentUser ? currentUser.uid : null,
         userName: currentUser ? currentUser.name : (customerName || 'Guest'),
         userEmail: currentUser ? currentUser.email : '',
         customerName: customerName || (currentUser ? currentUser.name : 'Guest'),
@@ -287,60 +278,49 @@ function placeOrder(paymentMethod, customerPhone, address, customerName, contact
             const product = products.find(p => p.id === item.productId);
             return { productId: item.productId, name: product.name, price: product.price, quantity: item.quantity, image: product.image };
         }),
-        subtotal,
-        deliveryFee,
-        deliveryLocation,
-        total,
-        paymentMethod,
-        paymentPhone: customerPhone,
-        address,
-        status: 'Pending',
+        subtotal, deliveryFee, deliveryLocation, total,
+        paymentMethod, paymentPhone: customerPhone,
+        address, status: 'Pending',
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     };
     await DB.addOrder(order);
     clearCart();
     return { success: true, orderId };
 }
-
 function getUserOrders() {
     if (!isLoggedIn()) return [];
-    return DB.getOrders().filter(o => o.userId === getCurrentUser().id).sort((a, b) => b.id.localeCompare(a.id));
+    return DB.getOrders().filter(o => o.userId === getCurrentUser().uid).sort((a, b) => b.id.localeCompare(a.id));
 }
-
 function getAllOrders() {
     return DB.getOrders().sort((a, b) => b.id.localeCompare(a.id));
 }
-
-function updateOrderStatus(orderId, status) {
-    const orders = DB.getOrders();
-    const order = orders.find(o => o.id === orderId);
-    if (order) { order.status = status; DB.setOrders(orders); }
+async function updateOrderStatus(orderId, status) {
+    await DB.updateOrderStatus(orderId, status);
 }
-
 function getOrdersByPhone(phone) {
-    const allOrders = DB.getOrders();
-    return allOrders.filter(o => o.contactPhone && o.contactPhone === phone).sort((a, b) => b.id.localeCompare(a.id));
+    return DB.getOrders().filter(o => o.contactPhone && o.contactPhone === phone).sort((a, b) => b.id.localeCompare(a.id));
 }
 
 // ===== MESSAGE FUNCTIONS =====
-function saveContactMessage(name, email, phone, message) {
+async function saveContactMessage(name, email, phone, message) {
     const messages = DB.getMessages();
     const id = messages.length > 0 ? Math.max(...messages.map(m => m.id)) + 1 : 1;
+    const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     await DB.addMessage({ id, name, email, phone, message, date, status: 'unread' });
     return true;
 }
-
 function getAllMessages() {
     return DB.getMessages().sort((a, b) => b.id - a.id);
 }
-
-function markMessageRead(id) {
-    const messages = DB.getMessages();
-    const msg = messages.find(m => m.id === id);
-    if (msg) { msg.status = msg.status === 'unread' ? 'read' : 'unread'; await DB.markMessageRead(id, newStatus); }
+async function markMessageRead(id) {
+    const msg = DB.getMessages().find(m => m.id === id);
+    if (msg) {
+        const newStatus = msg.status === 'unread' ? 'read' : 'unread';
+        msg.status = newStatus;
+        await DB.markMessageRead(id, newStatus);
+    }
 }
-
-function deleteMessage(id) {
+async function deleteMessage(id) {
     await DB.deleteMessage(id);
 }
 
@@ -348,7 +328,6 @@ function deleteMessage(id) {
 function formatPrice(price) {
     return '\u09F3' + price.toLocaleString('en-IN');
 }
-
 function showToast(message, type) {
     type = type || 'success';
     const container = document.getElementById('toastContainer');
@@ -360,39 +339,31 @@ function showToast(message, type) {
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
-
 function updateNavCart() {
     const badge = document.getElementById('navCartBadge');
     if (badge) badge.textContent = getCartCount();
 }
-
 function renderStars(rating) {
     const full = Math.floor(rating);
-    const empty = 5 - full;
-    return '\u2605'.repeat(full) + '\u2606'.repeat(empty);
+    return '\u2605'.repeat(full) + '\u2606'.repeat(5 - full);
 }
-
 function toggleDropdown() {
     const dd = document.getElementById('userDropdown');
     if (dd) dd.classList.toggle('show');
 }
-
 async function submitContactForm() {
     const name = document.getElementById('contactName').value.trim();
     const email = document.getElementById('contactEmail').value.trim();
     const phone = document.getElementById('contactPhoneForm').value.trim();
     const message = document.getElementById('contactMessage').value.trim();
-    
     if (!name || !email || !message) {
         showToast('Please fill all required fields', 'error');
         return;
     }
-    
     await saveContactMessage(name, email, phone, message);
     showToast('Message sent successfully! We will contact you soon.');
     document.getElementById('contactForm').reset();
 }
-
 function updateAdminMessageBadge() {
     const unread = DB.getMessages().filter(m => m.status === 'unread').length;
     const badge = document.getElementById('messagesBadge');
@@ -405,32 +376,37 @@ function updateAdminMessageBadge() {
 // ===== AUTH PAGE LOGIC =====
 async function initAuthPage() {
     await initData();
-    const user = getCurrentUser();
-    if (user && user.role === 'admin') { window.location.href = 'admin.html'; return; }
-
+    const user = await waitForAuth();
+    if (user) {
+        const doc = await firestore.collection('users').doc(user.uid).get();
+        const data = doc.data() || {};
+        if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
+    }
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
-       e.preventDefault();
-       const email = document.getElementById('loginEmail').value;
-       const password = document.getElementById('loginPassword').value;
-       
-       const result = await login(email, password);
-       
-       if (result.success && result.user.role === 'admin') {
-           window.location.href = 'admin.html';
-       } else {
-           document.getElementById('loginError').style.display = 'block';
-           if (result.success && result.user.role !== 'admin') {
-               document.getElementById('loginErrorText').textContent = 'Admin access only!';
-           } else {
-               document.getElementById('loginErrorText').textContent = 'Invalid email or password!';
-           }
-       }
-   });
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const result = await login(email, password);
+        if (result.success) {
+            const currentUser = auth.currentUser;
+            const doc = await firestore.collection('users').doc(currentUser.uid).get();
+            const data = doc.data() || {};
+            if (data.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('loginErrorText').textContent = 'Admin access only!';
+                await auth.signOut();
+            }
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+            document.getElementById('loginErrorText').textContent = result.message;
+        }
+    });
 }
 
 // ===== NAV LOGIC =====
-async function initNav() {
-    await initData();
+function initNav() {
     const user = getCurrentUser();
     const authNav = document.getElementById('authNav');
     const userNav = document.getElementById('userNav');
@@ -443,22 +419,18 @@ async function initNav() {
         const avatarEl = document.getElementById('navUserAvatar');
         const dropName = document.getElementById('dropdownName');
         const dropEmail = document.getElementById('dropdownEmail');
-        if (nameEl) nameEl.textContent = user.name;
-        if (avatarEl) avatarEl.textContent = user.name.charAt(0).toUpperCase();
-        if (dropName) dropName.textContent = user.name;
-        if (dropEmail) dropEmail.textContent = user.email;
+        if (nameEl) nameEl.textContent = user.name || 'User';
+        if (avatarEl) avatarEl.textContent = (user.name || 'U').charAt(0).toUpperCase();
+        if (dropName) dropName.textContent = user.name || 'User';
+        if (dropEmail) dropEmail.textContent = user.email || '';
         if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
         updateNavCart();
     } else {
-        if (authNav) {
-            authNav.style.display = 'flex';
-            authNav.innerHTML = '<a href="cart.html" class="nav-icon" style="margin-right:10px; text-decoration:none;"><i class="fas fa-shopping-bag"></i><span class="cart-badge" id="navCartBadge">0</span></a>';
-        }
+        if (authNav) authNav.style.display = 'flex';
         if (userNav) userNav.style.display = 'none';
         if (adminLink) adminLink.style.display = 'none';
         updateNavCart();
     }
-
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.user-menu')) {
             document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('show'));
@@ -467,12 +439,12 @@ async function initNav() {
 }
 
 // ===== INDEX PAGE LOGIC =====
-async function iinitIndexPage() {
+async function initIndexPage() {
     await initData();
+    await syncAuthUser();
     initNav();
     renderProducts('all');
     renderNewArrivals();
-
     const urlParams = new URLSearchParams(window.location.search);
     const category = urlParams.get('category');
     if (category) {
@@ -483,14 +455,16 @@ async function iinitIndexPage() {
     }
 }
 
+let currentFilter = 'all';
 function renderProducts(filter) {
+    currentFilter = filter;
     const grid = document.getElementById('productsGrid');
     if (!grid) return;
     const products = getProducts(filter);
     grid.innerHTML = products.map(p => `
         <div class="product-card fade-in">
             <div class="product-image">
-                <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x500?text=Luxe+Attire'">
+                <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x500?text=VUNO'">
                 ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ''}
             </div>
             <div class="product-info">
@@ -512,7 +486,6 @@ function renderProducts(filter) {
         </div>
     `).join('');
 }
-
 function renderNewArrivals() {
     const grid = document.getElementById('newProductsGrid');
     if (!grid) return;
@@ -520,7 +493,7 @@ function renderNewArrivals() {
     grid.innerHTML = products.map(p => `
         <div class="product-card fade-in">
             <div class="product-image">
-                <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x500?text=Luxe+Attire'">
+                <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x500?text=VUNO'">
                 <span class="product-badge">New Arrival</span>
             </div>
             <div class="product-info">
@@ -542,7 +515,6 @@ function renderNewArrivals() {
         </div>
     `).join('');
 }
-
 function filterProducts(category, el) {
     renderProducts(category);
     document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
@@ -552,10 +524,10 @@ function filterProducts(category, el) {
 // ===== CART PAGE LOGIC =====
 async function initCartPage() {
     await initData();
+    await syncAuthUser();
     initNav();
     renderCart();
 }
-
 function renderCart() {
     const container = document.getElementById('cartContainer');
     const cart = getCart();
@@ -578,7 +550,7 @@ function renderCart() {
         total += subtotal;
         return `
             <div class="cart-item">
-                <img src="${product.image}" class="cart-item-img" alt="${product.name}" onerror="this.src='https://via.placeholder.com/100x120?text=Luxe+Attire'">
+                <img src="${product.image}" class="cart-item-img" alt="${product.name}" onerror="this.src='https://via.placeholder.com/100x120?text=VUNO'">
                 <div class="cart-item-details">
                     <div class="cart-item-name">${product.name}</div>
                     <div class="cart-item-price">${formatPrice(product.price)}</div>
@@ -593,14 +565,13 @@ function renderCart() {
             </div>
         `;
     }).join('');
-
     container.innerHTML = `
         <div class="cart-grid">
             <div class="cart-items-box">${itemsHtml}</div>
             <div class="cart-summary">
                 <h3>Order Summary</h3>
                 <div class="summary-row"><span>Subtotal</span><span style="font-weight: 600;">${formatPrice(total)}</span></div>
-                <div class="summary-row"><span>Shipping</span><span style="font-weight: 600;font-size: 14px; color: var(--success);"> Free shipping on orders over ৳1500</span></div>
+                <div class="summary-row"><span>Shipping</span><span style="font-weight: 600;font-size: 14px; color: var(--success);"> Free shipping on orders over \u09F31500</span></div>
                 <div class="summary-row total"><span>Total</span><span>${formatPrice(total)}</span></div>
                 <a href="checkout.html" class="btn-gold" style="width: 100%; text-align: center; margin-top: 20px; display: block;">Proceed to Checkout</a>
                 <a href="index.html" style="display: block; text-align: center; margin-top: 15px; color: var(--text-light); text-decoration: none;">Continue Shopping</a>
@@ -612,10 +583,10 @@ function renderCart() {
 // ===== CHECKOUT PAGE LOGIC =====
 async function initCheckoutPage() {
     await initData();
+    await syncAuthUser();
     initNav();
     const cart = getCart();
     if (cart.length === 0) { window.location.href = 'cart.html'; return; }
-    
     const currentUser = getCurrentUser();
     if (currentUser) {
         const nameInput = document.getElementById('customerName');
@@ -623,7 +594,6 @@ async function initCheckoutPage() {
         if (nameInput) nameInput.value = currentUser.name;
         if (phoneInput) phoneInput.value = currentUser.phone || '';
     }
-    
     const products = DB.getProducts();
     let subtotal = 0;
     const summaryHtml = cart.map(item => {
@@ -632,7 +602,7 @@ async function initCheckoutPage() {
         subtotal += itemTotal;
         return `
             <div style="display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
-                <img src="${product.image}" style="width: 60px; height: 75px; border-radius: 8px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/60x75?text=Luxe+Attire'">
+                <img src="${product.image}" style="width: 60px; height: 75px; border-radius: 8px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/60x75?text=VUNO'">
                 <div style="flex: 1;">
                     <p style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${product.name}</p>
                     <p style="color: var(--text-light); font-size: 13px;">Qty: ${item.quantity}</p>
@@ -641,16 +611,13 @@ async function initCheckoutPage() {
             </div>
         `;
     }).join('');
-    
     document.getElementById('checkoutSummary').innerHTML = summaryHtml;
     updateCheckoutTotal(subtotal);
-    
     const deliveryLoc = document.getElementById('deliveryLocation');
     if (deliveryLoc) {
         deliveryLoc.addEventListener('change', () => updateCheckoutTotal(subtotal));
     }
-    
-    document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+    document.getElementById('checkoutForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const method = document.querySelector('input[name="payment_method"]:checked');
         const phone = document.getElementById('customerPhone').value.trim();
@@ -658,12 +625,10 @@ async function initCheckoutPage() {
         const customerName = document.getElementById('customerName').value.trim();
         const contactPhone = document.getElementById('contactPhone').value.trim();
         const deliveryLocation = document.getElementById('deliveryLocation').value;
-        
         if (!method) { showToast('Please select a payment method', 'error'); return; }
         if (!customerName || !contactPhone || !phone || !address) { 
             showToast('Please fill all fields', 'error'); return; 
         }
-        
         const deliveryFee = deliveryLocation === 'dhaka' ? 75 : 120;
         const result = await placeOrder(method.value, phone, address, customerName, contactPhone, deliveryFee, deliveryLocation);
         if (result.success) {
@@ -676,7 +641,6 @@ async function initCheckoutPage() {
         }
     });
 }
-
 function updateCheckoutTotal(subtotal) {
     const deliveryLocation = document.getElementById('deliveryLocation');
     if (!deliveryLocation) return;
@@ -689,7 +653,6 @@ function updateCheckoutTotal(subtotal) {
     if (deliveryEl) deliveryEl.textContent = formatPrice(fee);
     if (totalEl) totalEl.textContent = formatPrice(total);
 }
-
 function selectPayment(el, method) {
     document.querySelectorAll('.payment-method').forEach(p => {
         p.classList.remove('selected');
@@ -705,12 +668,11 @@ function selectPayment(el, method) {
 // ===== ORDERS PAGE LOGIC =====
 async function initOrdersPage() {
     await initData();
+    await syncAuthUser();
     initNav();
-    
     const user = getCurrentUser();
     const lookupSection = document.getElementById('orderLookupSection');
     const ordersSection = document.getElementById('ordersSection');
-    
     if (user) {
         if (lookupSection) lookupSection.style.display = 'none';
         if (ordersSection) ordersSection.style.display = 'block';
@@ -720,7 +682,6 @@ async function initOrdersPage() {
         if (ordersSection) ordersSection.style.display = 'none';
     }
 }
-
 function lookupOrders() {
     const phone = document.getElementById('lookupPhone').value.trim();
     if (!phone) { showToast('Please enter your phone number', 'error'); return; }
@@ -729,19 +690,16 @@ function lookupOrders() {
     if (ordersSection) ordersSection.style.display = 'block';
     renderGuestOrders(orders, phone);
 }
-
 function renderUserOrders() {
     const orders = getUserOrders();
     const tbody = document.getElementById('ordersTableBody');
     const title = document.getElementById('ordersTitle');
     if (title) title.textContent = 'My Orders';
     if (!tbody) return;
-    
     if (orders.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No orders found</td></tr>';
         return;
     }
-    
     tbody.innerHTML = orders.map(o => {
         let statusClass = o.status === 'Pending' ? 'status-pending' : 
                           o.status === 'Processing' ? 'status-processing' : 
@@ -750,11 +708,9 @@ function renderUserOrders() {
         if (o.status === 'Processing') statusText = 'Payment Verified - Confirmed';
         if (o.status === 'Cancelled') statusText = 'Payment Rejected - Cancelled';
         if (o.status === 'Pending') statusText = 'Awaiting Verification';
-        
         const methodIcon = o.paymentMethod === 'bkash' ? '<i class="fas fa-mobile-alt" style="color: #d12053;"></i>' : 
                            o.paymentMethod === 'nagad' ? '<i class="fas fa-money-bill-wave" style="color: #f7931e;"></i>' : 
                            '<i class="fas fa-rocket" style="color: #8e44ad;"></i>';
-        
         return `
             <tr style="border-bottom: 1px solid #f0f0f0;">
                 <td style="padding: 15px; font-weight: 600;">#${o.id}</td>
@@ -772,7 +728,6 @@ function renderUserOrders() {
         `;
     }).join('');
 }
-
 function renderGuestOrders(orders, phone) {
     const tbody = document.getElementById('ordersTableBody');
     const title = document.getElementById('ordersTitle');
@@ -788,7 +743,6 @@ function renderGuestOrders(orders, phone) {
         if (o.status === 'Processing') statusText = 'Payment Verified - Confirmed';
         if (o.status === 'Cancelled') statusText = 'Payment Rejected - Cancelled';
         if (o.status === 'Pending') statusText = 'Awaiting Verification';
-        
         const methodIcon = o.paymentMethod === 'bkash' ? '<i class="fas fa-mobile-alt" style="color: #d12053;"></i>' : o.paymentMethod === 'nagad' ? '<i class="fas fa-money-bill-wave" style="color: #f7931e;"></i>' : '<i class="fas fa-rocket" style="color: #8e44ad;"></i>';
         return `
             <tr style="border-bottom: 1px solid #f0f0f0;">
@@ -807,14 +761,11 @@ function renderGuestOrders(orders, phone) {
         `;
     }).join('');
 }
-
 function showOrderDetails(orderId) {
     const order = DB.getOrders().find(o => o.id === orderId);
     if (!order) return;
-    
     const content = document.getElementById('orderDetailsContent');
     if (!content) return;
-    
     let statusClass = order.status === 'Pending' ? 'status-pending' : 
                       order.status === 'Processing' ? 'status-processing' : 
                       order.status === 'Completed' ? 'status-completed' : 'status-cancelled';
@@ -822,14 +773,12 @@ function showOrderDetails(orderId) {
     if (order.status === 'Processing') statusText = 'Payment Verified - Confirmed';
     if (order.status === 'Cancelled') statusText = 'Payment Rejected - Cancelled';
     if (order.status === 'Pending') statusText = 'Awaiting Verification';
-    
     const methodIcon = order.paymentMethod === 'bkash' ? '<i class="fas fa-mobile-alt" style="color: #d12053;"></i>' : 
                        order.paymentMethod === 'nagad' ? '<i class="fas fa-money-bill-wave" style="color: #f7931e;"></i>' : 
                        '<i class="fas fa-rocket" style="color: #8e44ad;"></i>';
-    
     const itemsHtml = order.items.map(item => `
         <div style="display: flex; gap: 15px; padding: 15px; background: #f9f9f9; border-radius: 12px; margin-bottom: 10px;">
-            <img src="${item.image}" style="width: 60px; height: 75px; border-radius: 8px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/60x75?text=Luxe+Attire'">
+            <img src="${item.image}" style="width: 60px; height: 75px; border-radius: 8px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/60x75?text=VUNO'">
             <div style="flex: 1;">
                 <p style="font-weight: 600; margin-bottom: 4px;">${item.name}</p>
                 <p style="color: #666; font-size: 13px;">${formatPrice(item.price)} x ${item.quantity}</p>
@@ -837,7 +786,6 @@ function showOrderDetails(orderId) {
             <div style="font-weight: 700; color: var(--accent);">${formatPrice(item.price * item.quantity)}</div>
         </div>
     `).join('');
-    
     content.innerHTML = `
         <div style="margin-bottom: 25px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -846,7 +794,6 @@ function showOrderDetails(orderId) {
             </div>
             <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; ${statusClass === 'status-pending' ? 'background: #fff3cd; color: #856404;' : statusClass === 'status-processing' ? 'background: #cce5ff; color: #004085;' : statusClass === 'status-completed' ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">${statusText}</div>
         </div>
-        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
             <div style="background: #f9f9f9; padding: 20px; border-radius: 12px;">
                 <h4 style="font-size: 14px; color: #666; margin-bottom: 10px; text-transform: uppercase;">Customer Info</h4>
@@ -861,7 +808,6 @@ function showOrderDetails(orderId) {
                 <p style="font-size: 13px; color: #666; margin-top: 5px;"><i class="fas fa-truck" style="margin-right: 5px;"></i> Delivery: ${formatPrice(order.deliveryFee || 0)}</p>
             </div>
         </div>
-        
         <div style="margin-bottom: 20px;">
             <h4 style="font-size: 14px; color: #666; margin-bottom: 15px; text-transform: uppercase;">Payment Info</h4>
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
@@ -869,57 +815,49 @@ function showOrderDetails(orderId) {
                 <span style="font-weight: 600;">${order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1)}</span>
             </div>
         </div>
-        
         <div style="margin-bottom: 20px;">
             <h4 style="font-size: 14px; color: #666; margin-bottom: 15px; text-transform: uppercase;">Items</h4>
             ${itemsHtml}
         </div>
-        
         <div style="border-top: 2px solid #eee; padding-top: 20px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 18px; font-weight: 700;">Total Amount</span>
             <span style="font-size: 24px; font-weight: 700; color: var(--accent);">${formatPrice(order.total)}</span>
         </div>
     `;
-    
     openModal('orderDetailsModal');
 }
 
 // ===== ADMIN PAGE LOGIC =====
-function initAdminPage() {
+async function initAdminPage() {
     await initData();
+    await syncAuthUser();
     if (!isAdmin()) { window.location.href = 'index.html'; return; }
     initNav();
     updateAdminMessageBadge();
     showAdminTab('dashboard');
 }
-
 function showAdminTab(tab) {
     document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
     const navItem = document.querySelector('.admin-nav-item[data-tab="' + tab + '"]');
     if (navItem) navItem.classList.add('active');
-
     document.querySelectorAll('.admin-panel').forEach(p => p.classList.add('hidden'));
     const panel = document.getElementById('admin-' + tab);
     if (panel) panel.classList.remove('hidden');
-
     if (tab === 'dashboard') renderAdminDashboard();
     if (tab === 'products') renderAdminProducts();
     if (tab === 'orders') renderAdminOrders();
     if (tab === 'customers') renderAdminCustomers();
     if (tab === 'messages') renderAdminMessages();
 }
-
 function renderAdminDashboard() {
     const orders = DB.getOrders();
     const products = DB.getProducts();
     const users = DB.getUsers().filter(u => u.role === 'user');
     const revenue = orders.filter(o => o.status === 'Completed' || o.status === 'Processing').reduce((sum, o) => sum + o.total, 0);
-
     document.getElementById('statOrders').textContent = orders.length;
     document.getElementById('statProducts').textContent = products.length;
     document.getElementById('statCustomers').textContent = users.length;
     document.getElementById('statRevenue').textContent = formatPrice(revenue);
-
     const recentOrders = orders.slice(0, 5);
     const tbody = document.getElementById('recentOrdersTable');
     tbody.innerHTML = recentOrders.map(o => {
@@ -936,13 +874,12 @@ function renderAdminDashboard() {
         `;
     }).join('');
 }
-
 function renderAdminProducts() {
     const products = DB.getProducts();
     const tbody = document.getElementById('adminProductsTable');
     tbody.innerHTML = products.map(p => `
         <tr>
-            <td><img src="${p.image}" class="table-img" onerror="this.src='https://via.placeholder.com/50x60?text=Luxe+Attire'"></td>
+            <td><img src="${p.image}" class="table-img" onerror="this.src='https://via.placeholder.com/50x60?text=VUNO'"></td>
             <td style="font-weight: 600;">${p.name}</td>
             <td>${p.category.charAt(0).toUpperCase() + p.category.slice(1)}</td>
             <td style="font-weight: 700; color: var(--accent);">${formatPrice(p.price)}</td>
@@ -956,14 +893,12 @@ function renderAdminProducts() {
         </tr>
     `).join('');
 }
-
 function renderAdminOrders() {
     const orders = getAllOrders();
     const tbody = document.getElementById('adminOrdersTable');
     tbody.innerHTML = orders.map(o => {
         const statusClass = o.status === 'Pending' ? 'status-pending' : o.status === 'Processing' ? 'status-processing' : o.status === 'Completed' ? 'status-completed' : 'status-cancelled';
         const methodIcon = o.paymentMethod === 'bkash' ? '<i class="fas fa-mobile-alt" style="color: #d12053;"></i>' : o.paymentMethod === 'nagad' ? '<i class="fas fa-money-bill-wave" style="color: #f7931e;"></i>' : '<i class="fas fa-rocket" style="color: #8e44ad;"></i>';
-        
         let actionCell = '';
         if (o.status === 'Pending') {
             actionCell = `
@@ -975,7 +910,6 @@ function renderAdminOrders() {
         } else {
             actionCell = `<span class="status-badge ${statusClass}">${o.status}</span>`;
         }
-        
         return `
             <tr>
                 <td style="font-weight: 600;">#${o.id}</td>
@@ -993,7 +927,6 @@ function renderAdminOrders() {
         `;
     }).join('');
 }
-
 function renderAdminCustomers() {
     const users = DB.getUsers().filter(u => u.role === 'user');
     const orders = DB.getOrders();
@@ -1011,18 +944,15 @@ function renderAdminCustomers() {
         `;
     }).join('');
 }
-
 function renderAdminMessages() {
     const messages = getAllMessages();
     const tbody = document.getElementById('adminMessagesTable');
     updateAdminMessageBadge();
-    
     if (!tbody) return;
     if (messages.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No messages found</td></tr>';
         return;
     }
-    
     tbody.innerHTML = messages.map(m => `
         <tr style="${m.status === 'unread' ? 'background: #fff8e1;' : ''}">
             <td style="padding: 15px; font-weight: ${m.status === 'unread' ? '700' : '600'};">${m.name}</td>
@@ -1040,21 +970,18 @@ function renderAdminMessages() {
         </tr>
     `).join('');
 }
-
 async function deleteMessageAdmin(id) {
     if (!confirm('Are you sure you want to delete this message?')) return;
     await deleteMessage(id);
-     renderAdminMessages();
+    renderAdminMessages();
     showToast('Message deleted!');
 }
-
 async function deleteProductAdmin(id) {
     if (!confirm('Are you sure you want to delete this product?')) return;
     await deleteProduct(id);
-     renderAdminProducts();
+    renderAdminProducts();
     showToast('Product deleted!');
 }
-
 function editProduct(id) {
     const product = getProduct(id);
     if (!product) return;
@@ -1068,7 +995,6 @@ function editProduct(id) {
     document.getElementById('editProductDesc').value = product.description || '';
     openModal('editProductModal');
 }
-
 async function saveEditProduct() {
     const id = parseInt(document.getElementById('editProductId').value);
     const data = {
@@ -1085,7 +1011,6 @@ async function saveEditProduct() {
     renderAdminProducts();
     showToast('Product updated!');
 }
-
 async function saveNewProduct() {
     const product = {
         name: document.getElementById('newProductName').value,
@@ -1105,19 +1030,16 @@ async function saveNewProduct() {
     renderAdminProducts();
     showToast('Product added!');
 }
-
 async function acceptOrder(orderId) {
     await updateOrderStatus(orderId, 'Processing');
-     renderAdminOrders();
+    renderAdminOrders();
     showToast('Order accepted!');
 }
-
 async function rejectOrder(orderId) {
     await updateOrderStatus(orderId, 'Cancelled');
     renderAdminOrders();
     showToast('Order rejected!');
 }
-
 async function clearAllOrders() {
     if (!confirm('WARNING: Are you sure you want to permanently delete ALL orders? This action cannot be undone!' )) return;
     const snap = await firestore.collection('orders').get();
@@ -1127,6 +1049,5 @@ async function clearAllOrders() {
     renderAdminOrders();
     showToast('All orders cleared!');
 }
-
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
