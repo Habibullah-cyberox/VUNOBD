@@ -427,29 +427,24 @@ function initNav() {
     const adminLink = document.getElementById('adminLink');
 
     if (user) {
-        // Logged in (customer or admin)
         if (authNav) authNav.style.display = 'none';
         if (userNav) userNav.style.display = 'flex';
-        
-        const nameEl = document.getElementById('navUserName');
-        const avatarEl = document.getElementById('navUserAvatar');
-        const dropName = document.getElementById('dropdownName');
-        const dropEmail = document.getElementById('dropdownEmail');
-        
         if (nameEl) nameEl.textContent = user.name || 'User';
         if (avatarEl) avatarEl.textContent = (user.name || 'U').charAt(0).toUpperCase();
         if (dropName) dropName.textContent = user.name || 'User';
         if (dropEmail) dropEmail.textContent = user.email || '';
         if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
     } else {
-        // Guest user
+        // Guest
         if (authNav) authNav.style.display = 'flex';
         if (userNav) userNav.style.display = 'none';
         if (adminLink) adminLink.style.display = 'none';
     }
     
-    // CRITICAL: Update cart badge for guest, customer, AND admin
+    // THIS MUST BE HERE - updates badge for guests too
     updateNavCart();
+    }
+    
     
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.user-menu')) {
