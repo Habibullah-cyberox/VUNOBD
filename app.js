@@ -341,11 +341,21 @@ function showToast(message, type) {
 }
 function updateNavCart() {
     const badge = document.getElementById('navCartBadge');
-    if (badge) {
-        const count = getCartCount();
-        badge.textContent = count;
-        badge.style.display = count > 0 ? 'flex' : 'none';
+    if (!badge) {
+        console.warn('navCartBadge element not found in DOM');
+        return;
     }
+    
+    const count = getCartCount();
+    badge.textContent = count;
+    
+    // Force show/hide with inline style
+    if (count > 0) {
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
 }
 function renderStars(rating) {
     const full = Math.floor(rating);
@@ -417,7 +427,6 @@ function initNav() {
     const adminLink = document.getElementById('adminLink');
 
     if (user) {
-        // Logged in: hide Sign In button, show user menu
         if (authNav) authNav.style.display = 'none';
         if (userNav) userNav.style.display = 'flex';
         
@@ -432,13 +441,12 @@ function initNav() {
         if (dropEmail) dropEmail.textContent = user.email || '';
         if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
     } else {
-        // Guest: show Sign In button, hide user menu
         if (authNav) authNav.style.display = 'flex';
         if (userNav) userNav.style.display = 'none';
         if (adminLink) adminLink.style.display = 'none';
     }
     
-    // Update cart badge for BOTH guest and logged-in users
+    // THIS IS CRITICAL - update badge for both guest and logged-in
     updateNavCart();
     
     document.addEventListener('click', function(e) {
