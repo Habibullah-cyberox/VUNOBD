@@ -19,17 +19,20 @@
                 <li><a href="index.html#about">About</a></li>
                 <li><a href="index.html#contact">Contact</a></li>
             </ul>
-            <div class="nav-actions">
+            <<div class="nav-actions">
+    <!-- Cart icon - ALWAYS visible for both guests and logged-in users -->
+                <a href="cart.html" class="nav-icon" style="margin-right: 15px; text-decoration: none;">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="cart-badge" id="navCartBadge">0</span>
+                </a>
+                
                 <div id="authNav" style="display: none;">
                     <a href="auth.html" class="btn-gold" style="padding: 10px 25px; font-size: 14px;">Sign In</a>
                 </div>
+                
                 <div id="userNav" style="display: none;">
                     <a href="orders.html" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 14px; margin-right: 15px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; background: var(--light); transition: all 0.3s;" onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--light)';this.style.color='var(--primary)'">
                         <i class="fas fa-box"></i> My Orders
-                    </a>
-                    <a href="cart.html" class="nav-icon">
-                        <i class="fas fa-shopping-bag"></i>
-                        <span class="cart-badge" id="navCartBadge">0</span>
                     </a>
                     <div class="user-menu" onclick="toggleDropdown()">
                         <div class="user-avatar" id="navUserAvatar">U</div>
