@@ -587,6 +587,7 @@ async function initCheckoutPage() {
     initNav();
     const cart = getCart();
     if (cart.length === 0) { window.location.href = 'cart.html'; return; }
+    
     const currentUser = getCurrentUser();
     if (currentUser) {
         const nameInput = document.getElementById('customerName');
@@ -594,10 +595,12 @@ async function initCheckoutPage() {
         if (nameInput) nameInput.value = currentUser.name;
         if (phoneInput) phoneInput.value = currentUser.phone || '';
     }
+    
     const products = DB.getProducts();
     let subtotal = 0;
     const summaryHtml = cart.map(item => {
         const product = products.find(p => p.id === item.productId);
+        if (!product) return '';
         const itemTotal = product.price * item.quantity;
         subtotal += itemTotal;
         return `
@@ -611,33 +614,44 @@ async function initCheckoutPage() {
             </div>
         `;
     }).join('');
+    
     document.getElementById('checkoutSummary').innerHTML = summaryHtml;
     updateCheckoutTotal(subtotal);
+    
     const deliveryLoc = document.getElementById('deliveryLocation');
     if (deliveryLoc) {
         deliveryLoc.addEventListener('change', () => updateCheckoutTotal(subtotal));
     }
+    
     document.getElementById('checkoutForm').addEventListener('submit', async function(e) {
         e.preventDefault();
-        const method = document.querySelector('input[name="payment_method"]:checked');
-        const phone = document.getElementById('customerPhone').value.trim();
-        const address = document.getElementById('deliveryAddress').value.trim();
-        const customerName = document.getElementById('customerName').value.trim();
-        const contactPhone = document.getElementById('contactPhone').value.trim();
-        const deliveryLocation = document.getElementById('deliveryLocation').value;
-        if (!method) { showToast('Please select a payment method', 'error'); return; }
-        if (!customerName || !contactPhone || !phone || !address) { 
-            showToast('Please fill all fields', 'error'); return; 
-        }
-        const deliveryFee = deliveryLocation === 'dhaka' ? 75 : 120;
-        const result = await placeOrder(method.value, phone, address, customerName, contactPhone, deliveryFee, deliveryLocation);
-        if (result.success) {
-            document.getElementById('checkoutForm').classList.add('hidden');
-            document.getElementById('orderSuccess').classList.remove('hidden');
-            document.getElementById('successOrderId').textContent = '#' + result.orderId;
-            showToast('Order placed successfully!');
-        } else {
-            showToast(result.message, 'error');
+        try {
+            const method = document.querySelector('input[name="payment_method"]:checked');
+            const phone = document.getElementById('customerPhone').value.trim();
+            const address = document.getElementById('deliveryAddress').value.trim();
+            const customerName = document.getElementById('customerName').value.trim();
+            const contactPhone = document.getElementById('contactPhone').value.trim();
+            const deliveryLocation = document.getElementById('deliveryLocation').value;
+            
+            if (!method) { showToast('Please select a payment method', 'error'); return; }
+            if (!customerName || !contactPhone || !phone || !address) { 
+                showToast('Please fill all fields', 'error'); return; 
+            }
+            
+            const deliveryFee = deliveryLocation === 'dhaka' ? 75 : 120;
+            const result = await placeOrder(method.value, phone, address, customerName, contactPhone, deliveryFee, deliveryLocation);
+            
+            if (result.success) {
+                document.getElementById('checkoutForm').classList.add('hidden');
+                document.getElementById('orderSuccess').classList.remove('hidden');
+                document.getElementById('successOrderId').textContent = '#' + result.orderId;
+                showToast('Order placed successfully!');
+            } else {
+                showToast(result.message || 'Failed to place order', 'error');
+            }
+        } catch (err) {
+            console.error('Order error:', err);
+            showToast('Order failed: ' + (err.message || 'Unknown error'), 'error');
         }
     });
 }
