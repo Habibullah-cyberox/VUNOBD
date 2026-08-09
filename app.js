@@ -341,7 +341,11 @@ function showToast(message, type) {
 }
 function updateNavCart() {
     const badge = document.getElementById('navCartBadge');
-    if (badge) badge.textContent = getCartCount();
+    if (badge) {
+        const count = getCartCount();
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'flex' : 'none';
+    }
 }
 function renderStars(rating) {
     const full = Math.floor(rating);
@@ -413,31 +417,36 @@ function initNav() {
     const adminLink = document.getElementById('adminLink');
 
     if (user) {
+        // Logged in: hide Sign In button, show user menu
         if (authNav) authNav.style.display = 'none';
         if (userNav) userNav.style.display = 'flex';
+        
         const nameEl = document.getElementById('navUserName');
         const avatarEl = document.getElementById('navUserAvatar');
         const dropName = document.getElementById('dropdownName');
         const dropEmail = document.getElementById('dropdownEmail');
+        
         if (nameEl) nameEl.textContent = user.name || 'User';
         if (avatarEl) avatarEl.textContent = (user.name || 'U').charAt(0).toUpperCase();
         if (dropName) dropName.textContent = user.name || 'User';
         if (dropEmail) dropEmail.textContent = user.email || '';
         if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
-        updateNavCart();
     } else {
+        // Guest: show Sign In button, hide user menu
         if (authNav) authNav.style.display = 'flex';
         if (userNav) userNav.style.display = 'none';
         if (adminLink) adminLink.style.display = 'none';
-        updateNavCart();
     }
+    
+    // Update cart badge for BOTH guest and logged-in users
+    updateNavCart();
+    
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.user-menu')) {
             document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('show'));
         }
     });
 }
-
 // ===== INDEX PAGE LOGIC =====
 async function initIndexPage() {
     await initData();
